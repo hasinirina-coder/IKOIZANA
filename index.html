@@ -776,23 +776,63 @@ function mName(cb){
   mBtns([[X("Valider"),()=>{PN=$("pn").value.trim().replace(/[<>]/g,"");cb()},"btn yes"],[X("Rester anonyme"),()=>{PN="";cb()},"btn ghost"]],true);
   setTimeout(()=>{const i=$("pn");if(i)i.focus()},60);
 }
-function mReg(){
-  const old=$("rg")?$("rg").value:"";
-  MR=mReg;mOpen();if(G){clearInterval(G.iv);G.stop=1}
-  mSay(()=>T4(`Pour garder tes ${XP} XP${nm()}, laisse-moi ton e-mail ou ton numéro de téléphone. 📲`,`Mba hitahiry ny XP ${XP}${nm()}, avelao eto ny mailakao na ny laharan-telefaonao. 📲`,`想保留你的 ${XP} XP${nm()}，请留下你的电子邮箱或手机号码。📲`,`To keep your ${XP} XP${nm()}, leave me your email or phone number. 📲`));
-  MB.innerHTML=`<input class="in" id="rg" maxlength="60" placeholder="${X("E-mail ou numéro de téléphone")}" aria-label="${X("E-mail ou téléphone")}"><p class="fb" id="rf"></p>`;
-  if(old)$("rg").value=old;
-  mBtns([[X("Enregistrer mon XP"),()=>{
-    const v=$("rg").value.trim().replace(/[<>]/g,""),ok=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)||v.replace(/\D/g,"").length>=8;
-    if(!ok){$("rf").textContent=X("Entre un e-mail ou un numéro valide.");return}
-    REG=1;REGD=Date.now()+7*864e5;mRegDone(v);
-  },"btn yes"]],true);
+/* ===== INSCRIPTION RÉELLE (Supabase via auth.js → window.IkoAuth) =====
+   mReg("up")  = créer un compte   |   mReg("in") = se connecter
+   Pour changer un texte : modifie la ligne T4("FR","MG","ZH","EN") correspondante. */
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let regBusy=0;
+function mReg(a){
+  const mode=a==="in"?"in":"up";           /* a peut être un clic : on ignore alors */
+  const oe=$("rg")?$("rg").value:"";
+  MR=()=>mReg(mode);mOpen();if(G){clearInterval(G.iv);G.stop=1}
+  mSay(()=>mode==="in"
+    ?T4(`Content de te revoir${nm()} ! Connecte-toi. 👋`,`Faly mahita anao indray${nm()}! Midira. 👋`,`欢迎回来${nm()}！请登录。👋`,`Welcome back${nm()}! Log in. 👋`)
+    :T4(`Crée ton compte pour garder tes ${XP} XP${nm()}. E-mail + mot de passe, ou Google. 🔐`,`Mamorona kaonty mba hitahiry ny XP ${XP}${nm()}. Mailaka + tenimiafina, na Google. 🔐`,`创建账号以保留你的 ${XP} XP${nm()}。邮箱＋密码，或使用 Google。🔐`,`Create your account to keep your ${XP} XP${nm()}. Email + password, or Google. 🔐`));
+  MB.innerHTML=`<input class="in" id="rg" type="email" autocomplete="email" maxlength="80" placeholder="${T4("E-mail","Mailaka","电子邮箱","Email")}" aria-label="${T4("E-mail","Mailaka","电子邮箱","Email")}"><input class="in" id="rp" type="password" autocomplete="${mode==="in"?"current-password":"new-password"}" maxlength="72" style="margin-top:8px" placeholder="${T4("Mot de passe (6 caractères min.)","Tenimiafina (6 farafahakeliny)","密码（至少 6 位）","Password (min. 6 characters)")}" aria-label="${T4("Mot de passe","Tenimiafina","密码","Password")}"><p class="fb" id="rf"></p>`;
+  if(oe)$("rg").value=oe;
+  const L=[
+    [mode==="in"?T4("Me connecter","Hiditra","登录","Log in"):T4("Créer mon compte","Hamorona kaonty","创建账号","Create my account"),()=>regGo(mode),"btn yes"],
+    [T4("Continuer avec Google","Tohizo amin’ny Google","使用 Google 继续","Continue with Google"),regGoogle,"btn"],
+    [mode==="in"?T4("Créer un compte","Hamorona kaonty vaovao","创建新账号","Create an account"):T4("J’ai déjà un compte","Manana kaonty aho","我已有账号","I already have an account"),()=>mReg(mode==="in"?"up":"in"),"btn ghost"]
+  ];
+  if(mode==="in")L.push([T4("Mot de passe oublié","Adino ny tenimiafina","忘记密码","Forgot password"),regForgot,"btn ghost"]);
+  mBtns(L,true);
 }
-function mRegDone(v){
-  MR=()=>mRegDone(v);mOpen();
-  const d=new Date(REGD).toLocaleDateString(T4("fr-FR","fr-FR","zh-CN","en-GB"));
-  mSay(()=>T4(`✅ C’est enregistré${nm()} ! Mais attention : télécharge l’application avant le ${d} (7 jours) pour récupérer tes ${XP} XP, sinon ils seront perdus.`,`✅ Voasoratra${nm()}! Fa mitandrema: ampidino ny fampiharana alohan’ny ${d} (7 andro) mba hahazoanao ny XP ${XP}, raha tsy izany dia ho very izy ireo.`,`✅ 已登记${nm()}！请注意：请在 ${d} 之前（7 天内）下载应用来领取你的 ${XP} XP，否则它们将会丢失。`,`✅ You’re registered${nm()}! But be careful: download the app before ${d} (7 days) to claim your ${XP} XP, otherwise they will be lost.`));
-  MB.innerHTML=`<div class="alert"><i class="fa-solid fa-circle-check"></i><div><b>${X("Enregistré (simulation)")}</b><br>${v}<br>${T4(`${XP} XP à récupérer avant le ${d} : installe l’app et utilise le même contact.`,`XP ${XP} horaisina alohan’ny ${d}: apetraho ny fampiharana ary ampiasao ny fifandraisana mitovy.`,`请在 ${d} 前领取 ${XP} XP：安装应用并使用同一联系方式。`,`${XP} XP to claim before ${d}: install the app and use the same contact details.`)}</div></div>`;
+const emOK=v=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+async function regGo(mode){
+  if(regBusy)return;
+  const f=$("rf"),em=$("rg").value.trim().replace(/[<>]/g,""),pw=$("rp").value;
+  if(!emOK(em)){f.textContent=T4("Entre un e-mail valide.","Ampidiro mailaka marina.","请输入有效的电子邮箱。","Enter a valid email.");return}
+  if(pw.length<6){f.textContent=T4("6 caractères minimum.","6 farafahakeliny.","至少 6 个字符。","6 characters minimum.");return}
+  if(!window.IkoAuth){f.textContent=T4("Service indisponible, réessaie.","Tsy azo ampiasaina, andramo indray.","服务暂不可用，请重试。","Service unavailable, try again.");return}
+  regBusy=1;f.textContent="…";
+  const r=mode==="in"?await IkoAuth.connecter(em,pw):await IkoAuth.inscrire(em,pw,PN,XP);
+  regBusy=0;
+  if(!r.ok){f.textContent=r.error;return}      /* message d’erreur en français (auth.js) */
+  REG=1;mRegDone(em,mode,r.confirmationRequise);
+}
+async function regGoogle(){
+  if(!window.IkoAuth){$("rf").textContent=T4("Service indisponible, réessaie.","Tsy azo ampiasaina, andramo indray.","服务暂不可用，请重试。","Service unavailable, try again.");return}
+  REG=1;                                         /* évite l’alerte « quitter la page ? » */
+  const r=await IkoAuth.connecterGoogle(XP);
+  if(!r.ok){REG=0;$("rf").textContent=r.error}
+}
+async function regForgot(){
+  const f=$("rf"),em=$("rg").value.trim();
+  if(!emOK(em)){f.textContent=T4("Entre d’abord ton e-mail.","Ampidiro aloha ny mailakao.","请先输入你的电子邮箱。","Enter your email first.");return}
+  const r=await IkoAuth.motDePasseOublie(em);
+  f.textContent=r.ok?T4("E-mail envoyé ! Vérifie ta boîte de réception.","Alefa ny mailaka! Jereo ny boaty fandraisanao.","邮件已发送！请查看收件箱。","Email sent! Check your inbox."):r.error;
+}
+function mRegDone(em,mode,conf){
+  MR=()=>mRegDone(em,mode,conf);mOpen();
+  const e=esc(em);
+  const msg=mode==="in"
+    ?T4(`✅ Connecté${nm()} ! Content de te revoir.`,`✅ Tafiditra${nm()}! Faly mahita anao indray.`,`✅ 已登录${nm()}！欢迎回来。`,`✅ Logged in${nm()}! Welcome back.`)
+    :conf
+    ?T4(`✅ Compte créé${nm()} ! Un e-mail de confirmation t’a été envoyé : clique sur le lien, puis installe l’app et connecte-toi avec ${e} pour retrouver tes ${XP} XP.`,`✅ Voaforona ny kaonty${nm()}! Nisy mailaka fanamafisana nalefa: tsindrio ny rohy, avy eo apetraho ny fampiharana ary midira amin’ny ${e} mba hahitana ny XP ${XP}.`,`✅ 账号已创建${nm()}！确认邮件已发送：请点击链接，然后安装应用并用 ${e} 登录，找回你的 ${XP} XP。`,`✅ Account created${nm()}! A confirmation email was sent: click the link, then install the app and log in with ${e} to find your ${XP} XP.`)
+    :T4(`✅ Compte créé${nm()} ! Installe l’app et connecte-toi avec ${e} pour retrouver tes ${XP} XP.`,`✅ Voaforona ny kaonty${nm()}! Apetraho ny fampiharana ary midira amin’ny ${e} mba hahitana ny XP ${XP}.`,`✅ 账号已创建${nm()}！安装应用并用 ${e} 登录，找回你的 ${XP} XP。`,`✅ Account created${nm()}! Install the app and log in with ${e} to find your ${XP} XP.`);
+  mSay(()=>msg);
+  MB.innerHTML=`<div class="alert"><i class="fa-solid fa-circle-check"></i><div><b>${T4("Compte IKOIZANA","Kaonty IKOIZANA","IKOIZANA 账号","IKOIZANA account")}</b><br>${e}</div></div>`;
   mBtns([[GP,CONF.play,"btn"],[AS,CONF.apple,"btn"]],true);
 }
 function mPlay(k,list,rev){
@@ -975,5 +1015,6 @@ $("lang").onclick=()=>lang(LG[(LG.indexOf(LANG)+1)%LG.length]);   // MG → CH �
 lang(LANG);
 
 </script>
+<script type="module" src="auth.js"></script>
 </body>
 </html>
